@@ -25,7 +25,17 @@ public abstract class SqsListener {
           new LinkedBlockingQueue<>(1000),
           new ThreadPoolExecutor.DiscardPolicy());
 
-  private record MsgReceiptHandle(String receiptHandle, boolean erred, int receivedCount) {}
+  private static class MsgReceiptHandle {
+    String receiptHandle;
+    boolean erred;
+    int receivedCount;
+
+    MsgReceiptHandle(String receiptHandle, boolean erred, int receivedCount) {
+      this.receiptHandle = receiptHandle;
+      this.erred = erred;
+      this.receivedCount = receivedCount;
+    }
+  }
 
   private static final Logger logger = Logger.getLogger(SqsListener.class.getName());
 
@@ -104,29 +114,29 @@ public abstract class SqsListener {
               processingTaskService.submit(
                   () -> {
                     try {
-                      process(message.body());
+                      process(message.body);
                     } catch (Exception e) {
                       logger.log(Level.SEVERE, "Error processing", e);
                       return new MsgReceiptHandle(
-                          message.receiptHandle(), true, message.receivedCount());
+                          message.receiptHandle, true, message.receivedCount);
                     }
                     return new MsgReceiptHandle(
-                        message.receiptHandle(), false, message.receivedCount());
+                        message.receiptHandle, false, message.receivedCount);
                   }));
 
       for (int i = 0; i < messages.size(); i++) {
         try {
           final Future<MsgReceiptHandle> future = processingTaskService.take();
           final MsgReceiptHandle msgReceiptHandle = future.get();
-          if (!msgReceiptHandle.erred()) {
-            deleteMessageQueue.offer(msgReceiptHandle.receiptHandle());
+          if (!msgReceiptHandle.erred) {
+            deleteMessageQueue.offer(msgReceiptHandle.receiptHandle);
           } else {
             erredMessagePool.submit(
                 () ->
                     sqsServiceClient.changeVisibilityTimeout(
                         queueName,
-                        msgReceiptHandle.receiptHandle(),
-                        visibilityTimeout.multipliedBy(msgReceiptHandle.receivedCount() + 1)));
+                        msgReceiptHandle.receiptHandle,
+                        visibilityTimeout.multipliedBy(msgReceiptHandle.receivedCount + 1)));
           }
           processedMsgCount++;
         } catch (Exception e) {

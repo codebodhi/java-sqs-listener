@@ -120,10 +120,10 @@ class SqsServiceClientSdk2Test {
     assertEquals(3, receivedMessages.size());
 
     List<SqsMessage> sortedMessages =
-        receivedMessages.stream().sorted(Comparator.comparing(SqsMessage::messageId)).toList();
+        receivedMessages.stream().sorted(Comparator.comparing(m -> m.messageId)).toList();
 
-    assertEquals("msg1-body", sortedMessages.get(0).body());
-    assertEquals("msg2-body", sortedMessages.get(1).body());
-    assertEquals("msg3-body", sortedMessages.get(2).body());
+    assertEquals("msg1-body", sortedMessages.get(0).body);
+    assertEquals("msg2-body", sortedMessages.get(1).body);
+    assertEquals("msg3-body", sortedMessages.get(2).body);
   }
 }

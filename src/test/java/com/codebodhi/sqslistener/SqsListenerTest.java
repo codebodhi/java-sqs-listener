@@ -105,13 +105,14 @@ class SqsListenerTest {
               builder
                   .queueUrl(queueUrl)
                   .messageBody(
-                      """
-                                             {
-                                                "id": %d,
-                                                "name": "%s"
-                                             }
-                                            """
-                          .formatted(iteration, "test-user-" + iteration))
+                      "{\n"
+                          + "  \"id\": "
+                          + iteration
+                          + ",\n"
+                          + "  \"name\": \"test-user-"
+                          + iteration
+                          + "  \"\n"
+                          + "}")
                   .build());
     }
 
