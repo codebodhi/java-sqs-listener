@@ -91,7 +91,7 @@ public abstract class SqsListener {
     }
   }
 
-  public abstract void process(String message);
+  public abstract void process(String message) throws Exception;
 
   final void doProcess() {
     final int totalNoOfMessages = sqsServiceClient.getTotalNumberOfMessages(queueName);
