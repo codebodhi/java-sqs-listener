@@ -7,9 +7,11 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.sqs.SqsClient;
 
 public abstract class SqsListener {
+  private static final org.slf4j.Logger log = LoggerFactory.getLogger(SqsListener.class);
   private final String queueName;
   private final Duration pollingFrequency;
   private final Duration visibilityTimeout;
@@ -78,11 +80,26 @@ public abstract class SqsListener {
 
       Executors.newScheduledThreadPool(1)
           .scheduleAtFixedRate(
-              this::doProcess, 0L, pollingFrequency.getSeconds(), TimeUnit.SECONDS);
+              () -> {
+                try {
+                  this.doProcess();
+                } catch (Exception e) {
+                  log.error("Error in doProcess()", e);
+                }
+              },
+              0L,
+              pollingFrequency.getSeconds(),
+              TimeUnit.SECONDS);
 
       Executors.newScheduledThreadPool(1)
           .scheduleAtFixedRate(
-              this::delete,
+              () -> {
+                try {
+                  this.delete();
+                } catch (Exception e) {
+                  log.error("Error in delete()", e);
+                }
+              },
               pollingFrequency.getSeconds() / 2,
               pollingFrequency.getSeconds(),
               TimeUnit.SECONDS);
@@ -148,10 +165,10 @@ public abstract class SqsListener {
   }
 
   final void delete() {
-    logger.info("DeleteMessageQueue size = " + deleteMessageQueue.size());
     if (deleteMessageQueue.isEmpty()) {
       return;
     }
+    logger.info("DeleteMessageQueue size = " + deleteMessageQueue.size());
     final int deleteTaskSize =
         deleteMessageQueue.size() > 10 ? (deleteMessageQueue.size() / 10 + 1) : 1;
     for (int i = 0; i < deleteTaskSize; i++) {
