@@ -122,6 +122,12 @@ public abstract class SqsListener {
       final Set<SqsMessage> messages =
           sqsServiceClient.receiveMessage(
               queueName, pollingFrequency, parallelization, visibilityTimeout);
+
+      if (messages.isEmpty()) {
+        log.info("No messages received");
+        return;
+      }
+
       logger.info("Received " + messages.size() + " messages");
       final ExecutorService processingTaskPool = Executors.newFixedThreadPool(parallelization);
       final CompletionService<MsgReceiptHandle> processingTaskService =
