@@ -5,13 +5,12 @@ import java.io.InputStream;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.sqs.SqsClient;
 
 public abstract class SqsListener {
-  private static final org.slf4j.Logger log = LoggerFactory.getLogger(SqsListener.class);
+  private static final Logger log = LoggerFactory.getLogger(SqsListener.class);
   private final String queueName;
   private final Duration pollingFrequency;
   private final Duration visibilityTimeout;
@@ -37,12 +36,6 @@ public abstract class SqsListener {
       this.erred = erred;
       this.receivedCount = receivedCount;
     }
-  }
-
-  private static final Logger logger = Logger.getLogger(SqsListener.class.getName());
-
-  static {
-    System.setProperty("java.util.logging.config.file", "src/main/resources/logging.properties");
   }
 
   public SqsListener(String queueName) {
@@ -112,7 +105,7 @@ public abstract class SqsListener {
 
   final void doProcess() {
     final int totalNoOfMessages = sqsServiceClient.getTotalNumberOfMessages(queueName);
-    logger.info("Found a total of " + totalNoOfMessages + " no. of messages");
+    log.debug("Found a total of {} no. of messages", totalNoOfMessages);
     if (totalNoOfMessages == 0) {
       return;
     }
@@ -128,7 +121,7 @@ public abstract class SqsListener {
         return;
       }
 
-      logger.info("Received " + messages.size() + " messages");
+      log.debug("Received {} messages", messages.size());
       final ExecutorService processingTaskPool = Executors.newFixedThreadPool(parallelization);
       final CompletionService<MsgReceiptHandle> processingTaskService =
           new ExecutorCompletionService<>(processingTaskPool);
@@ -139,7 +132,7 @@ public abstract class SqsListener {
                     try {
                       process(message.body);
                     } catch (Exception e) {
-                      logger.log(Level.SEVERE, "Error processing", e);
+                      log.error("Error processing message {}", message.body, e);
                       return new MsgReceiptHandle(
                           message.receiptHandle, true, message.receivedCount);
                     }
@@ -174,13 +167,13 @@ public abstract class SqsListener {
     if (deleteMessageQueue.isEmpty()) {
       return;
     }
-    logger.info("DeleteMessageQueue size = " + deleteMessageQueue.size());
+    log.debug("DeleteMessageQueue size = {} ", deleteMessageQueue.size());
     final int deleteTaskSize =
         deleteMessageQueue.size() > 10 ? (deleteMessageQueue.size() / 10 + 1) : 1;
     for (int i = 0; i < deleteTaskSize; i++) {
       final Set<String> toBeDeleted = new HashSet<>(10);
       deleteMessageQueue.drainTo(toBeDeleted, 10);
-      logger.info("Messages toBeDeleted = " + toBeDeleted.size());
+      log.debug("Messages toBeDeleted = {} ", toBeDeleted.size());
       final ExecutorService deleteTaskPool = Executors.newFixedThreadPool(deleteTaskSize);
       deleteTaskPool.submit(
           () -> sqsServiceClient.deleteMessages(queueName, new HashSet<>(toBeDeleted)));
