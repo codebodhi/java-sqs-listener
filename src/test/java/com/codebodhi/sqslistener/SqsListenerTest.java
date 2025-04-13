@@ -120,7 +120,7 @@ class SqsListenerTest {
     new SqsListener(
         queueName,
         SqsListenerConfig.builder()
-            .parallelization(5)
+            .parallelism(5)
             .pollingFrequency(Duration.ofSeconds(1))
             .sqsClient(sqsClient)
             .build()) {

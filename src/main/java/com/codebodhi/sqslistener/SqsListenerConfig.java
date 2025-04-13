@@ -6,7 +6,7 @@ import software.amazon.awssdk.services.sqs.SqsClient;
 public class SqsListenerConfig {
   Duration pollingFrequency;
   Duration visibilityTimeout;
-  int parallelization;
+  int parallelism;
   SqsClient sqsClient;
 
   private SqsListenerConfig() {}
@@ -16,13 +16,10 @@ public class SqsListenerConfig {
   }
 
   public SqsListenerConfig(
-      Duration pollingFrequency,
-      Duration visibilityTimeout,
-      int parallelization,
-      SqsClient sqsClient) {
+      Duration pollingFrequency, Duration visibilityTimeout, int parallelism, SqsClient sqsClient) {
     this.pollingFrequency = pollingFrequency;
     this.visibilityTimeout = visibilityTimeout;
-    this.parallelization = parallelization;
+    this.parallelism = parallelism;
     this.sqsClient = sqsClient;
   }
 
@@ -36,8 +33,8 @@ public class SqsListenerConfig {
     return this;
   }
 
-  public SqsListenerConfig parallelization(int parallelization) {
-    this.parallelization = parallelization;
+  public SqsListenerConfig parallelism(int parallelism) {
+    this.parallelism = parallelism;
     return this;
   }
 
@@ -47,6 +44,6 @@ public class SqsListenerConfig {
   }
 
   public SqsListenerConfig build() {
-    return new SqsListenerConfig(pollingFrequency, visibilityTimeout, parallelization, sqsClient);
+    return new SqsListenerConfig(pollingFrequency, visibilityTimeout, parallelism, sqsClient);
   }
 }

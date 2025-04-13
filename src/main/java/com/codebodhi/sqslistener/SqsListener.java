@@ -65,9 +65,9 @@ public abstract class SqsListener {
               ? defaultConfig.pollingFrequency
               : sqsListenerConfig.pollingFrequency;
       this.parallelization =
-          (sqsListenerConfig.parallelization == 0)
-              ? defaultConfig.parallelization
-              : sqsListenerConfig.parallelization;
+          (sqsListenerConfig.parallelism == 0)
+              ? defaultConfig.parallelism
+              : sqsListenerConfig.parallelism;
 
       deleteMessageQueue = new ArrayBlockingQueue<>(defaultConfig.deleteMessageQueueSize);
 
@@ -185,7 +185,7 @@ public abstract class SqsListener {
     final String sqsApiImplClass;
     final Duration visibilityTimeout;
     final Duration pollingFrequency;
-    final int parallelization;
+    final int parallelism;
     final int deleteMessageQueueSize;
 
     DefaultConfig() {
@@ -198,7 +198,7 @@ public abstract class SqsListener {
             Duration.ofSeconds(Long.parseLong(properties.getProperty("visibility-timeout")));
         pollingFrequency =
             Duration.ofSeconds(Long.parseLong(properties.getProperty("polling-frequency")));
-        parallelization = Integer.parseInt(properties.getProperty("parallelization"));
+        parallelism = Integer.parseInt(properties.getProperty("parallelism"));
         deleteMessageQueueSize =
             Integer.parseInt(properties.getProperty("delete-message-queue-size"));
       } catch (IOException e) {
