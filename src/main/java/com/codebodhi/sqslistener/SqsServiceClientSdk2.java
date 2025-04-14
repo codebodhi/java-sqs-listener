@@ -50,7 +50,7 @@ class SqsServiceClientSdk2 implements SqsServiceClient {
       Duration pollingFrequency,
       int parallelization,
       Duration visibilityTimeout) {
-    final int waitTimeout = (int) Math.min(pollingFrequency.toSeconds(), 20);
+    final int waitTimeout = (int) Math.min(pollingFrequency.getSeconds(), 20);
 
     final int maxNumberOfMessages = Math.min(parallelization, 10);
 
