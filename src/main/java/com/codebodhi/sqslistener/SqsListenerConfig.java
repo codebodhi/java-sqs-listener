@@ -34,6 +34,11 @@ public class SqsListenerConfig {
   }
 
   public SqsListenerConfig parallelism(int parallelism) {
+    if (parallelism < 0) {
+      throw new SqsListenerException("Invalid value for parallelism! Valid values are from 1-10");
+    } else if (parallelism > 10) {
+      throw new UnsupportedOperationException("Currently parallelism up to 10 is only supported!");
+    }
     this.parallelism = parallelism;
     return this;
   }

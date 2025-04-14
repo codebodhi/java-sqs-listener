@@ -121,5 +121,6 @@ public class MySqsListener extends SqsListener {
     }
 }
 ````
+## 🧠 How It Works
 
 Refer to this [java-sqs-listener-springboot-example](https://github.com/codebodhi/java-sqs-listener-springboot-example) for a comprehensive example demonstrating the integration of the library within a Spring Boot application. 
