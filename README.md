@@ -99,24 +99,25 @@ public class SqsListenerConfiguration {
 ````
 ➤ Create a Spring-managed service class that extends SqsListener 
 ````Java
-package com.codebodhi.sqslib.springboot;
-
 import com.codebodhi.sqslistener.SqsListener;
 import com.codebodhi.sqslistener.SqsListenerConfig;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
 @Service
 public class MySqsListener extends SqsListener {
-    public MySqsListener(@Value("${my-queue}") String queueName,
-                         @Qualifier("mySqsListenerConfig") SqsListenerConfig sqsListenerConfig) {
-        //super constructor
+    public MySqsListener(
+            @Value("${my-queue}") String queueName,
+            @Qualifier("mySqsListenerConfig") SqsListenerConfig sqsListenerConfig) {
+        // super constructor
         super(queueName, sqsListenerConfig);
-        //any other needed initialization here
+        // any other needed initialization here
     }
+
     @Override
     public void process(String message) {
-        //process the message
+        // process the message
     }
 }
 ````
