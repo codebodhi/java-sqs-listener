@@ -23,14 +23,14 @@ Add the following dependency to your `pom.xml`:
 <dependency>
     <groupId>com.codebodhi</groupId>
     <artifactId>java-sqs-listener</artifactId>
-    <version>2.7.0</version>
+    <version>2.8.0</version>
 </dependency>
 ```
 
 #### Gradle
 Add the following dependency to your `build.gradle`:
 ```
-  implementation 'com.codebodhi:java-sqs-listener:2.7.0'
+  implementation 'com.codebodhi:java-sqs-listener:2.8.0'
 ```
 
 ## 🔧 Usage
@@ -122,5 +122,20 @@ public class MySqsListener extends SqsListener {
 }
 ````
 ## 🧠 How It Works
+
+The library polls the queue regularly, processes messages in parallel, and deletes them in batches after successful processing. These behaviors can be configured using simple parameters.
+
+<optional collapsible section or link>
+
+<details>
+<summary>View Technical Details</summary>
+
+- Polling occurs every `pollingFrequency` seconds (default: 20)
+- The approximate number of available messages is retrieved during each poll and processed concurrently based on the configured `parallelism` setting (default: 1, maximum: 10, as limited by AWS SQS maxNumberOfMessages per poll)
+- Successfully processed messages are added to a deletion queue
+- Deletion is handled by a separate scheduled job, where messages are batched (up to 10 per AWS maxBatchSize limit) and deleted in parallel.
+- Failed messages are delayed by a duration of receiveCount × visibilityTimeout before being retried, until the maximum number of receive attempts is reached.
+
+</details>
 
 Refer to this [java-sqs-listener-springboot-example](https://github.com/codebodhi/java-sqs-listener-springboot-example) for a comprehensive example demonstrating the integration of the library within a Spring Boot application. 
