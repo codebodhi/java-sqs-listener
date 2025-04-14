@@ -33,9 +33,10 @@ Add the following dependency to your `build.gradle`:
   implementation 'com.codebodhi:java-sqs-listener:2.7.0'
 ```
 
-## Example Usage
+## 🔧 Usage
 
-### Plain Java usage with only SQS name
+### Plain Java
+➤ SQS Name
 ````Java
 import com.codebodhi.sqslistener.SqsListener;
 
@@ -52,7 +53,7 @@ public class MySqsListener {
 }
 ````
 
-#### Plain Java usage with SQS name & custom options
+➤ SQS name & configuration options
 ````Java
 import com.codebodhi.sqslistener.SqsListener;
 import com.codebodhi.sqslistener.SqsListenerConfig;
@@ -76,8 +77,8 @@ public class MySqsListener {
 }
 ````
 
-### Usage for a DI container like Spring 
-#### Set up config bean for SqsListenerConfig 
+### Usage within a DI container like Spring 
+➤ Register SqsListenerConfig as a Spring @Bean in your configuration class 
 ````Java
 import com.codebodhi.sqslistener.SqsListenerConfig;
 import java.time.Duration;
@@ -96,7 +97,7 @@ public class SqsListenerConfiguration {
     }
 }
 ````
-#### Define a Spring service extending the SQSListener 
+➤ Create a Spring-managed service class that extends SqsListener 
 ````Java
 package com.codebodhi.sqslib.springboot;
 
