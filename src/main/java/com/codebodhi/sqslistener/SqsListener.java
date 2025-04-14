@@ -14,7 +14,7 @@ public abstract class SqsListener {
   private final String queueName;
   private final Duration pollingFrequency;
   private final Duration visibilityTimeout;
-  private final int parallelization;
+  private final int parallelism;
   private final SqsServiceClient sqsServiceClient;
   private final ArrayBlockingQueue<String> deleteMessageQueue;
   private final ThreadPoolExecutor erredMessagePool =
@@ -46,6 +46,18 @@ public abstract class SqsListener {
     try {
       this.queueName = queueName;
       final DefaultConfig defaultConfig = DefaultConfig.INSTANCE;
+      this.visibilityTimeout =
+          (sqsListenerConfig.visibilityTimeout == null)
+              ? defaultConfig.visibilityTimeout
+              : sqsListenerConfig.visibilityTimeout;
+      this.pollingFrequency =
+          (sqsListenerConfig.pollingFrequency == null)
+              ? defaultConfig.pollingFrequency
+              : sqsListenerConfig.pollingFrequency;
+      this.parallelism =
+          (sqsListenerConfig.parallelism == 0)
+              ? defaultConfig.parallelism
+              : sqsListenerConfig.parallelism;
       this.sqsServiceClient =
           sqsListenerConfig.sqsClient != null
               ? (SqsServiceClient)
@@ -56,18 +68,6 @@ public abstract class SqsListener {
                   Class.forName(defaultConfig.sqsApiImplClass)
                       .getDeclaredConstructor()
                       .newInstance();
-      this.visibilityTimeout =
-          (sqsListenerConfig.visibilityTimeout == null)
-              ? defaultConfig.visibilityTimeout
-              : sqsListenerConfig.visibilityTimeout;
-      this.pollingFrequency =
-          (sqsListenerConfig.pollingFrequency == null)
-              ? defaultConfig.pollingFrequency
-              : sqsListenerConfig.pollingFrequency;
-      this.parallelization =
-          (sqsListenerConfig.parallelism == 0)
-              ? defaultConfig.parallelism
-              : sqsListenerConfig.parallelism;
 
       deleteMessageQueue = new ArrayBlockingQueue<>(defaultConfig.deleteMessageQueueSize);
 
@@ -114,7 +114,7 @@ public abstract class SqsListener {
     while (processedMsgCount < totalNoOfMessages) {
       final Set<SqsMessage> messages =
           sqsServiceClient.receiveMessage(
-              queueName, pollingFrequency, parallelization, visibilityTimeout);
+              queueName, pollingFrequency, parallelism, visibilityTimeout);
 
       if (messages.isEmpty()) {
         log.info("No messages received");
@@ -122,7 +122,7 @@ public abstract class SqsListener {
       }
 
       log.debug("Received {} messages", messages.size());
-      final ExecutorService processingTaskPool = Executors.newFixedThreadPool(parallelization);
+      final ExecutorService processingTaskPool = Executors.newFixedThreadPool(parallelism);
       final CompletionService<MsgReceiptHandle> processingTaskService =
           new ExecutorCompletionService<>(processingTaskPool);
       messages.forEach(
