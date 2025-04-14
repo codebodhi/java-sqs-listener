@@ -30,7 +30,7 @@ Add the following dependency to your `pom.xml`:
 #### Gradle
 Add the following dependency to your `build.gradle`:
 ```
-  implementation 'com.codebodhi:java-sqs-listener:2.6.0'
+  implementation 'com.codebodhi:java-sqs-listener:2.7.0'
 ```
 
 ## Example Usage
