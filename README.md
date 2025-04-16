@@ -5,8 +5,10 @@ Designed for simplicity and performance, this library allows you to continuously
 
 ## 🚀 Features
 
-- **Framework-Agnostic Integration**: Easily integrates with any Java application and works with any dependency injection (DI) framework—no need for external libraries like Spring.
+- **Lightweight (16 KB)**: The library is extremely compact, with a size of only 16 KB, making it ideal for environments where minimizing footprint is crucial.
+- **Java 8+ Compatibility:** Works with Java 8 and above, ensuring broad compatibility.
 - **Minimal Setup**: Only the SQS queue name is needed to start polling with the simplest configuration.
+- **Framework-Agnostic Integration**: Easily integrates with any Java application and works with any dependency injection (DI) framework—no need for external libraries like Spring.
 - **Customizable**: Configure concurrent message processing with a single parameter. Polling frequency and visibility timeout are fully adjustable. Uses a built-in SqsClient by default, or you can supply your own via configuration.
 - **Auto-Delete**: Successfully processed messages are automatically batched and deleted from the queue.
 - **Error Handling**: Failed messages are delayed and retried until the maximum number of attempts is reached.
@@ -121,6 +123,15 @@ public class MySqsListener extends SqsListener {
     }
 }
 ````
+
+## 🧩 Dependencies
+
+The `java-sqs-listener` library uses the following dependencies internally:
+ 
+- Java 8
+- AWS SDK for SQS (v2)
+- SLF4J (with an optional logger binding)
+
 ## 🧠 How It Works
 
 The library polls the queue regularly, processes messages in parallel, and deletes them in batches after successful processing. These behaviors can be configured using simple parameters.
