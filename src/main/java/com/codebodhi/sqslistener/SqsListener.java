@@ -71,7 +71,7 @@ public abstract class SqsListener {
 
       deleteMessageQueue = new ArrayBlockingQueue<>(defaultConfig.deleteMessageQueueSize);
 
-      Executors.newScheduledThreadPool(1)
+      Executors.newSingleThreadScheduledExecutor()
           .scheduleAtFixedRate(
               () -> {
                 try {
@@ -84,7 +84,7 @@ public abstract class SqsListener {
               pollingFrequency.getSeconds(),
               TimeUnit.SECONDS);
 
-      Executors.newScheduledThreadPool(1)
+      Executors.newSingleThreadScheduledExecutor()
           .scheduleAtFixedRate(
               () -> {
                 try {
