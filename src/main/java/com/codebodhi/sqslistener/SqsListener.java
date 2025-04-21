@@ -110,6 +110,8 @@ public abstract class SqsListener {
       return;
     }
 
+    final ExecutorService processingTaskPool =
+        Executors.newFixedThreadPool(Math.min(parallelism, totalNoOfMessages));
     int processedMsgCount = 0;
     while (processedMsgCount < totalNoOfMessages) {
       final Set<SqsMessage> messages =
@@ -122,7 +124,6 @@ public abstract class SqsListener {
       }
 
       log.debug("Received {} messages", messages.size());
-      final ExecutorService processingTaskPool = Executors.newFixedThreadPool(parallelism);
       final CompletionService<MsgReceiptHandle> processingTaskService =
           new ExecutorCompletionService<>(processingTaskPool);
       messages.forEach(
@@ -159,8 +160,8 @@ public abstract class SqsListener {
           throw new SqsListenerException("Error occurred processing message", e);
         }
       }
-      processingTaskPool.shutdown();
     }
+    processingTaskPool.shutdown();
   }
 
   final void delete() {
