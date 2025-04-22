@@ -5,41 +5,42 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import software.amazon.awssdk.regions.providers.DefaultAwsRegionProviderChain;
-import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.model.*;
 
 class SqsServiceClientSdk2 implements SqsServiceClient {
-  private final SqsClient sqsClient;
+  private final SqsAsyncClient sqsClient;
 
   SqsServiceClientSdk2() {
     sqsClient =
-        SqsClient.builder()
+        SqsAsyncClient.builder()
             .region(DefaultAwsRegionProviderChain.builder().build().getRegion())
             .build();
   }
 
-  SqsServiceClientSdk2(SqsClient sqsClient) {
+  SqsServiceClientSdk2(SqsAsyncClient sqsClient) {
     this.sqsClient = sqsClient;
   }
 
   @Override
   public String getQueueUrl(String queueName) {
-    return sqsClient
-        .getQueueUrl(GetQueueUrlRequest.builder().queueName(queueName).build())
+    return waitFor(sqsClient.getQueueUrl(GetQueueUrlRequest.builder().queueName(queueName).build()))
         .queueUrl();
   }
 
   @Override
   public int getTotalNumberOfMessages(String queueName) {
     final Map<QueueAttributeName, String> attributes =
-        sqsClient
-            .getQueueAttributes(
-                GetQueueAttributesRequest.builder()
-                    .queueUrl(getQueueUrl(queueName))
-                    .attributeNames(QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES)
-                    .build())
+        waitFor(
+                sqsClient.getQueueAttributes(
+                    GetQueueAttributesRequest.builder()
+                        .queueUrl(getQueueUrl(queueName))
+                        .attributeNames(QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES)
+                        .build()))
             .attributes();
     return Integer.parseInt(attributes.get(QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES));
   }
@@ -55,16 +56,17 @@ class SqsServiceClientSdk2 implements SqsServiceClient {
     final int maxNumberOfMessages = Math.min(parallelization, 10);
 
     final ReceiveMessageResponse response =
-        sqsClient.receiveMessage(
-            ReceiveMessageRequest.builder()
-                .queueUrl(getQueueUrl(queueName))
-                .waitTimeSeconds(waitTimeout)
-                .maxNumberOfMessages(maxNumberOfMessages)
-                .visibilityTimeout((int) visibilityTimeout.getSeconds())
-                .messageSystemAttributeNames(
-                    MessageSystemAttributeName.APPROXIMATE_FIRST_RECEIVE_TIMESTAMP,
-                    MessageSystemAttributeName.APPROXIMATE_RECEIVE_COUNT)
-                .build());
+        waitFor(
+            sqsClient.receiveMessage(
+                ReceiveMessageRequest.builder()
+                    .queueUrl(getQueueUrl(queueName))
+                    .waitTimeSeconds(waitTimeout)
+                    .maxNumberOfMessages(maxNumberOfMessages)
+                    .visibilityTimeout((int) visibilityTimeout.getSeconds())
+                    .messageSystemAttributeNames(
+                        MessageSystemAttributeName.APPROXIMATE_FIRST_RECEIVE_TIMESTAMP,
+                        MessageSystemAttributeName.APPROXIMATE_RECEIVE_COUNT)
+                    .build()));
 
     return response.messages().stream()
         .map(
@@ -117,5 +119,16 @@ class SqsServiceClientSdk2 implements SqsServiceClient {
             .receiptHandle(msgReceiptHandle)
             .visibilityTimeout((int) duration.getSeconds())
             .build());
+  }
+
+  private static <T> T waitFor(CompletableFuture<T> future) {
+    try {
+      return future.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt(); // preserve interrupt
+      throw new SqsListenerException("Thread interrupted", e);
+    } catch (ExecutionException e) {
+      throw new SqsListenerException("Async operation failed", e.getCause());
+    }
   }
 }

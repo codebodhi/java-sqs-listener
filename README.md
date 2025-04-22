@@ -21,18 +21,20 @@ Designed for simplicity and performance, this library allows you to continuously
 #### Maven
 Add the following dependency to your `pom.xml`:
 
+[![Maven Central](https://img.shields.io/maven-central/v/com.codebodhi/java-sqs-listener.svg?label=Maven%20Central)](https://search.maven.org/artifact/com.codebodhi/java-sqs-listener)
+
 ```xml
 <dependency>
     <groupId>com.codebodhi</groupId>
     <artifactId>java-sqs-listener</artifactId>
-    <version>2.8.0</version>
+    <version>latest-version</version> <!-- see badge for latest -->
 </dependency>
 ```
 
 #### Gradle
 Add the following dependency to your `build.gradle`:
 ```
-  implementation 'com.codebodhi:java-sqs-listener:2.8.0'
+implementation 'com.codebodhi:java-sqs-listener:latest-version' // see badge
 ```
 
 ## 🔧 Usage

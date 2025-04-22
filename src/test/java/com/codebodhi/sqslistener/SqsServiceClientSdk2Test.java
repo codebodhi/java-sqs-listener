@@ -5,20 +5,20 @@ import static org.mockito.Mockito.*;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.model.*;
 
 class SqsServiceClientSdk2Test {
   SqsServiceClientSdk2 sqsApiSdk2;
-  @Mock SqsClient sqsClient;
+  @Mock SqsAsyncClient sqsClient;
 
   @BeforeEach
   void before() {
@@ -27,11 +27,13 @@ class SqsServiceClientSdk2Test {
   }
 
   @Test
-  void shouldGetSqsUrl() {
+  void shouldGetSqsUrl() throws ExecutionException, InterruptedException {
     String queueName = "test-queue";
     String queueUrl = "dummy://mock-queue";
     when(sqsClient.getQueueUrl(GetQueueUrlRequest.builder().queueName(queueName).build()))
-        .thenReturn(GetQueueUrlResponse.builder().queueUrl(queueUrl).build());
+        .thenReturn(
+            CompletableFuture.completedFuture(
+                GetQueueUrlResponse.builder().queueUrl(queueUrl).build()));
     assertEquals(queueUrl, sqsApiSdk2.getQueueUrl(queueName));
   }
 
@@ -40,16 +42,21 @@ class SqsServiceClientSdk2Test {
     String queueName = "test-queue";
     String queueUrl = "dummy://mock-queue";
     when(sqsClient.getQueueUrl(GetQueueUrlRequest.builder().queueName(queueName).build()))
-        .thenReturn(GetQueueUrlResponse.builder().queueUrl(queueUrl).build());
+        .thenReturn(
+            CompletableFuture.completedFuture(
+                GetQueueUrlResponse.builder().queueUrl(queueUrl).build()));
+
+    Map<QueueAttributeName, String> attributeMap = new HashMap<>();
+    attributeMap.put(QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES, "10");
+
     when(sqsClient.getQueueAttributes(
             GetQueueAttributesRequest.builder()
                 .queueUrl(queueUrl)
                 .attributeNames(QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES)
                 .build()))
         .thenReturn(
-            GetQueueAttributesResponse.builder()
-                .attributes(Map.of(QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES, "10"))
-                .build());
+            CompletableFuture.completedFuture(
+                GetQueueAttributesResponse.builder().attributes(attributeMap).build()));
     assertEquals(10, sqsApiSdk2.getTotalNumberOfMessages(queueName));
   }
 
@@ -63,7 +70,9 @@ class SqsServiceClientSdk2Test {
     int visibilityTimeoutInSecs = 30;
 
     when(sqsClient.getQueueUrl(GetQueueUrlRequest.builder().queueName(queueName).build()))
-        .thenReturn(GetQueueUrlResponse.builder().queueUrl(queueUrl).build());
+        .thenReturn(
+            CompletableFuture.completedFuture(
+                GetQueueUrlResponse.builder().queueUrl(queueUrl).build()));
 
     when(sqsClient.receiveMessage(
             ReceiveMessageRequest.builder()
@@ -76,39 +85,25 @@ class SqsServiceClientSdk2Test {
                     MessageSystemAttributeName.APPROXIMATE_RECEIVE_COUNT)
                 .build()))
         .thenReturn(
-            ReceiveMessageResponse.builder()
-                .messages(
-                    Message.builder()
-                        .messageId("msg1")
-                        .body("msg1-body")
-                        .attributes(
-                            Map.of(
-                                MessageSystemAttributeName.APPROXIMATE_FIRST_RECEIVE_TIMESTAMP,
-                                String.valueOf(Instant.now().getEpochSecond()),
-                                MessageSystemAttributeName.APPROXIMATE_RECEIVE_COUNT,
-                                "1"))
-                        .build(),
-                    Message.builder()
-                        .messageId("msg2")
-                        .body("msg2-body")
-                        .attributes(
-                            Map.of(
-                                MessageSystemAttributeName.APPROXIMATE_FIRST_RECEIVE_TIMESTAMP,
-                                String.valueOf(Instant.now().getEpochSecond()),
-                                MessageSystemAttributeName.APPROXIMATE_RECEIVE_COUNT,
-                                "2"))
-                        .build(),
-                    Message.builder()
-                        .messageId("msg3")
-                        .body("msg3-body")
-                        .attributes(
-                            Map.of(
-                                MessageSystemAttributeName.APPROXIMATE_FIRST_RECEIVE_TIMESTAMP,
-                                String.valueOf(Instant.now().getEpochSecond()),
-                                MessageSystemAttributeName.APPROXIMATE_RECEIVE_COUNT,
-                                "3"))
-                        .build())
-                .build());
+            CompletableFuture.completedFuture(
+                ReceiveMessageResponse.builder()
+                    .messages(
+                        Message.builder()
+                            .messageId("msg1")
+                            .body("msg1-body")
+                            .attributes(messagAttributeMap(1))
+                            .build(),
+                        Message.builder()
+                            .messageId("msg2")
+                            .body("msg2-body")
+                            .attributes(messagAttributeMap(2))
+                            .build(),
+                        Message.builder()
+                            .messageId("msg3")
+                            .body("msg3-body")
+                            .attributes(messagAttributeMap(3))
+                            .build())
+                    .build()));
 
     Set<SqsMessage> receivedMessages =
         sqsApiSdk2.receiveMessage(
@@ -120,10 +115,22 @@ class SqsServiceClientSdk2Test {
     assertEquals(3, receivedMessages.size());
 
     List<SqsMessage> sortedMessages =
-        receivedMessages.stream().sorted(Comparator.comparing(m -> m.messageId)).toList();
+        receivedMessages.stream()
+            .sorted(Comparator.comparing(m -> m.messageId))
+            .collect(Collectors.toList());
 
     assertEquals("msg1-body", sortedMessages.get(0).body);
     assertEquals("msg2-body", sortedMessages.get(1).body);
     assertEquals("msg3-body", sortedMessages.get(2).body);
+  }
+
+  static Map<MessageSystemAttributeName, String> messagAttributeMap(int msgReceiveCount) {
+    Map<MessageSystemAttributeName, String> attributeMap = new HashMap<>();
+    attributeMap.put(
+        MessageSystemAttributeName.APPROXIMATE_FIRST_RECEIVE_TIMESTAMP,
+        String.valueOf(Instant.now().getEpochSecond()));
+    attributeMap.put(
+        MessageSystemAttributeName.APPROXIMATE_RECEIVE_COUNT, String.valueOf(msgReceiveCount));
+    return attributeMap;
   }
 }

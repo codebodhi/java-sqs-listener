@@ -18,7 +18,7 @@ import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.model.CreateQueueResponse;
 
 class SqsListenerTest {
@@ -31,7 +31,7 @@ class SqsListenerTest {
           .withDatabaseName("testdb")
           .withUsername("testuser")
           .withPassword("testpass");
-  static SqsClient sqsClient;
+  static SqsAsyncClient sqsClient;
   static final String queueName = "test-queue";
   static String queueUrl;
   static Connection conn;
@@ -40,7 +40,7 @@ class SqsListenerTest {
   static void setup() throws SQLException {
     localstack.start();
     sqsClient =
-        SqsClient.builder()
+        SqsAsyncClient.builder()
             .endpointOverride(localstack.getEndpointOverride(LocalStackContainer.Service.SQS))
             .credentialsProvider(
                 StaticCredentialsProvider.create(
@@ -49,7 +49,7 @@ class SqsListenerTest {
             .region(Region.of(localstack.getRegion()))
             .build();
     CreateQueueResponse createQueueResponse =
-        sqsClient.createQueue(builder -> builder.queueName(queueName).build());
+        sqsClient.createQueue(builder -> builder.queueName(queueName).build()).join();
     Assertions.assertNotNull(createQueueResponse, "createQueue failed");
     Assertions.assertNotNull(createQueueResponse.queueUrl(), "could not get queueUrl");
     queueUrl = createQueueResponse.queueUrl();
@@ -90,6 +90,7 @@ class SqsListenerTest {
                       .receiveMessage(
                           builder ->
                               builder.queueUrl(queueUrl).waitTimeSeconds(1).maxNumberOfMessages(10))
+                      .join()
                       .hasMessages();
               return messageReceived && hasNoMoreMessages;
             });
@@ -149,6 +150,7 @@ class SqsListenerTest {
                                     .queueUrl(queueUrl)
                                     .waitTimeSeconds(1)
                                     .maxNumberOfMessages(10))
+                        .join()
                         .hasMessages()
                     && getTotalCount() == messageSize);
   }

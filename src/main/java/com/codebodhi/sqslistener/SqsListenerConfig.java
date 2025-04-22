@@ -1,13 +1,13 @@
 package com.codebodhi.sqslistener;
 
 import java.time.Duration;
-import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 
 public class SqsListenerConfig {
   Duration pollingFrequency;
   Duration visibilityTimeout;
   int parallelism;
-  SqsClient sqsClient;
+  SqsAsyncClient sqsAsyncClient;
 
   private SqsListenerConfig() {}
 
@@ -16,11 +16,14 @@ public class SqsListenerConfig {
   }
 
   public SqsListenerConfig(
-      Duration pollingFrequency, Duration visibilityTimeout, int parallelism, SqsClient sqsClient) {
+      Duration pollingFrequency,
+      Duration visibilityTimeout,
+      int parallelism,
+      SqsAsyncClient sqsAsyncClient) {
     this.pollingFrequency = pollingFrequency;
     this.visibilityTimeout = visibilityTimeout;
     this.parallelism = parallelism;
-    this.sqsClient = sqsClient;
+    this.sqsAsyncClient = sqsAsyncClient;
   }
 
   public SqsListenerConfig pollingFrequency(Duration pollingFrequency) {
@@ -43,12 +46,12 @@ public class SqsListenerConfig {
     return this;
   }
 
-  public SqsListenerConfig sqsClient(SqsClient sqsClient) {
-    this.sqsClient = sqsClient;
+  public SqsListenerConfig sqsClient(SqsAsyncClient sqsAsyncClient) {
+    this.sqsAsyncClient = sqsAsyncClient;
     return this;
   }
 
   public SqsListenerConfig build() {
-    return new SqsListenerConfig(pollingFrequency, visibilityTimeout, parallelism, sqsClient);
+    return new SqsListenerConfig(pollingFrequency, visibilityTimeout, parallelism, sqsAsyncClient);
   }
 }

@@ -7,7 +7,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 
 public abstract class SqsListener {
   private static final Logger log = LoggerFactory.getLogger(SqsListener.class);
@@ -17,14 +17,6 @@ public abstract class SqsListener {
   private final int parallelism;
   private final SqsServiceClient sqsServiceClient;
   private final ArrayBlockingQueue<String> deleteMessageQueue;
-  private final ThreadPoolExecutor erredMessagePool =
-      new ThreadPoolExecutor(
-          0,
-          5,
-          60,
-          TimeUnit.SECONDS,
-          new LinkedBlockingQueue<>(1000),
-          new ThreadPoolExecutor.DiscardPolicy());
 
   private static class MsgReceiptHandle {
     String receiptHandle;
@@ -59,11 +51,11 @@ public abstract class SqsListener {
               ? defaultConfig.parallelism
               : sqsListenerConfig.parallelism;
       this.sqsServiceClient =
-          sqsListenerConfig.sqsClient != null
+          sqsListenerConfig.sqsAsyncClient != null
               ? (SqsServiceClient)
                   Class.forName(defaultConfig.sqsApiImplClass)
-                      .getDeclaredConstructor(SqsClient.class)
-                      .newInstance(sqsListenerConfig.sqsClient)
+                      .getDeclaredConstructor(SqsAsyncClient.class)
+                      .newInstance(sqsListenerConfig.sqsAsyncClient)
               : (SqsServiceClient)
                   Class.forName(defaultConfig.sqsApiImplClass)
                       .getDeclaredConstructor()
@@ -148,12 +140,10 @@ public abstract class SqsListener {
           if (!msgReceiptHandle.erred) {
             deleteMessageQueue.offer(msgReceiptHandle.receiptHandle);
           } else {
-            erredMessagePool.submit(
-                () ->
-                    sqsServiceClient.changeVisibilityTimeout(
-                        queueName,
-                        msgReceiptHandle.receiptHandle,
-                        visibilityTimeout.multipliedBy(msgReceiptHandle.receivedCount + 1)));
+            sqsServiceClient.changeVisibilityTimeout(
+                queueName,
+                msgReceiptHandle.receiptHandle,
+                visibilityTimeout.multipliedBy(msgReceiptHandle.receivedCount + 1));
           }
           processedMsgCount++;
         } catch (Exception e) {
@@ -175,9 +165,7 @@ public abstract class SqsListener {
       final Set<String> toBeDeleted = new HashSet<>(10);
       deleteMessageQueue.drainTo(toBeDeleted, 10);
       log.debug("Messages toBeDeleted = {} ", toBeDeleted.size());
-      final ExecutorService deleteTaskPool = Executors.newFixedThreadPool(deleteTaskSize);
-      deleteTaskPool.submit(
-          () -> sqsServiceClient.deleteMessages(queueName, new HashSet<>(toBeDeleted)));
+      sqsServiceClient.deleteMessages(queueName, new HashSet<>(toBeDeleted));
     }
   }
 

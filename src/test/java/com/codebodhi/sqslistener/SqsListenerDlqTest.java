@@ -3,6 +3,7 @@ package com.codebodhi.sqslistener;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Assertions;
@@ -13,7 +14,7 @@ import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
 import software.amazon.awssdk.services.sqs.model.CreateQueueResponse;
 import software.amazon.awssdk.services.sqs.model.GetQueueAttributesRequest;
@@ -24,7 +25,7 @@ class SqsListenerDlqTest {
       DockerImageName.parse("localstack/localstack:latest");
   static final LocalStackContainer localstack =
       new LocalStackContainer(LOCALSTACK_IMAGE).withServices(LocalStackContainer.Service.SQS);
-  static SqsClient sqsClient;
+  static SqsAsyncClient sqsClient;
   static final String queueName = "test-queue";
   static String queueUrl;
   static final String deadLetterQueueName = "test-queue-error";
@@ -34,7 +35,7 @@ class SqsListenerDlqTest {
   static void setup() {
     localstack.start();
     sqsClient =
-        SqsClient.builder()
+        SqsAsyncClient.builder()
             .endpointOverride(localstack.getEndpointOverride(LocalStackContainer.Service.SQS))
             .credentialsProvider(
                 StaticCredentialsProvider.create(
@@ -45,7 +46,9 @@ class SqsListenerDlqTest {
 
     // Create DLQ
     CreateQueueResponse dlqResponse =
-        sqsClient.createQueue(CreateQueueRequest.builder().queueName(deadLetterQueueName).build());
+        sqsClient
+            .createQueue(CreateQueueRequest.builder().queueName(deadLetterQueueName).build())
+            .join();
 
     deadLetterQueueUrl = dlqResponse.queueUrl();
     // Get DLQ ARN
@@ -56,21 +59,19 @@ class SqsListenerDlqTest {
                     .queueUrl(deadLetterQueueUrl)
                     .attributeNames(QueueAttributeName.QUEUE_ARN)
                     .build())
+            .join()
             .attributes()
             .get(QueueAttributeName.QUEUE_ARN);
 
+    Map<QueueAttributeName, String> attributeMap = new HashMap<>();
+    attributeMap.put(
+        QueueAttributeName.REDRIVE_POLICY,
+        String.format("{\"maxReceiveCount\":\"3\", \"deadLetterTargetArn\":\"%s\"}", dlqArn));
+
     CreateQueueResponse createQueueResponse =
-        sqsClient.createQueue(
-            builder ->
-                builder
-                    .queueName(queueName)
-                    .attributes(
-                        Map.of(
-                            QueueAttributeName.REDRIVE_POLICY,
-                            String.format(
-                                "{\"maxReceiveCount\":\"3\", \"deadLetterTargetArn\":\"%s\"}",
-                                dlqArn)))
-                    .build());
+        sqsClient
+            .createQueue(builder -> builder.queueName(queueName).attributes(attributeMap).build())
+            .join();
     Assertions.assertNotNull(createQueueResponse, "createQueue failed");
     Assertions.assertNotNull(createQueueResponse.queueUrl(), "could not get queueUrl");
     queueUrl = createQueueResponse.queueUrl();
@@ -105,6 +106,7 @@ class SqsListenerDlqTest {
                                 .queueUrl(deadLetterQueueUrl)
                                 .waitTimeSeconds(1)
                                 .maxNumberOfMessages(10))
+                    .join()
                     .hasMessages());
   }
 }
